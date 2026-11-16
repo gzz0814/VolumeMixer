@@ -15,9 +15,6 @@ endif
 # these jailbreaks, which is why the tweak never loaded on roothide.
 THEOS_PACKAGE_SCHEME = rootless
 
-# Maintainer scripts (postinst runs lsregister for the companion app).
-THEOS_PACKAGE_SCRIPT_FOLDER = packaging
-
 INSTALL_TARGET_PROCESSES = SpringBoard
 
 TWEAK_NAME = VolumeMixer

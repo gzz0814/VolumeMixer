@@ -47,38 +47,48 @@
 
     // Keep only real, home-screen apps. This drops the hundreds of system UI
     // agents (AAUIViewService, AirDropUI, Bark, CarPlaySplashScreen, ...).
-    // NB: isDockable is only meaningful inside SpringBoard and reads NO for every
-    // app from the preferences process, so filter by bundle location instead:
-    // keep App Store (/var/containers), jailbreak (/var/jb, /Applications) and
-    // Apple's own apps (/System/Applications); drop everything under
-    // /System/Library and XPC services.
-    NSMutableArray *list = [NSMutableArray new];
-    for(LSApplicationProxy *proxy in all){
-        NSString *bundleID = nil;
-        NSString *name = nil;
+    // NB: isDockable is only meaningful inside SpringBoard (reads NO for every
+    // app from the preferences process), so filter by bundle location instead.
+    // applicationType / bundleURL are read via KVC because that is the form that
+    // reliably works from this process; a direct typed call can misread them and
+    // silently empty the list.
+    NSMutableArray *userApps = [NSMutableArray new];
+    for(id proxy in all){
         @try {
-            if([proxy respondsToSelector:@selector(applicationType)] && [proxy applicationType] != 0){
+            NSNumber *type = [proxy valueForKey:@"applicationType"];
+            if(type && type.integerValue != 0){
                 continue; // 0 == LSApplicationProxyTypeApplicationUser
             }
-            if([proxy respondsToSelector:@selector(bundleURL)]){
-                NSString *path = [proxy bundleURL].path ?: @"";
-                if([path hasPrefix:@"/System/Library/"] || [path containsString:@"/XPCServices/"]){
-                    continue;
-                }
+            NSString *bundleID = [proxy bundleIdentifier];
+            NSString *name = [proxy respondsToSelector:@selector(localizedName)]
+                ? [proxy localizedName] : [proxy valueForKey:@"localizedName"];
+            if(![bundleID length] || ![name length]){
+                continue;
             }
-            bundleID = [proxy bundleIdentifier];
-            name = [proxy respondsToSelector:@selector(localizedName)] ? [proxy localizedName] : nil;
+            [userApps addObject:proxy];
         } @catch (__unused NSException *e) {
             continue;
         }
-        if(![bundleID length] || ![name length]){
-            continue;
-        }
-        [list addObject:proxy];
     }
 
-    [list sortUsingComparator:^NSComparisonResult(LSApplicationProxy *a, LSApplicationProxy *b){
-        return [[a localizedName] compare:[b localizedName] options:NSCaseInsensitiveSearch];
+    // Drop system agents/services by bundle path. Only adopt the filtered set if
+    // it is non-empty, so the picker can never go blank when bundleURL is odd.
+    NSMutableArray *filtered = [NSMutableArray new];
+    for(id proxy in userApps){
+        NSString *path = nil;
+        @try {
+            path = [proxy valueForKeyPath:@"bundleURL.path"];
+        } @catch (__unused NSException *e) {}
+        if([path hasPrefix:@"/System/Library/"] || [path containsString:@"/XPCServices/"]){
+            continue;
+        }
+        [filtered addObject:proxy];
+    }
+
+    NSMutableArray *list = filtered.count ? filtered : userApps;
+
+    [list sortUsingComparator:^NSComparisonResult(id a, id b){
+        return [[a valueForKey:@"localizedName"] compare:[b valueForKey:@"localizedName"] options:NSCaseInsensitiveSearch];
     }];
     _apps = list;
 
