@@ -77,6 +77,13 @@
             if(![bundleID length] || ![name length]){
                 continue;
             }
+            // The user only wants third-party (App Store) and TrollStore apps.
+            // Every Apple system app and UI agent has a com.apple.* identifier,
+            // while user/TrollStore apps never do, so this cleanly drops them all.
+            NSString *lower = bundleID.lowercaseString;
+            if([lower hasPrefix:@"com.apple."] || [lower isEqualToString:@"com.brend0n.volumemixer.launcher"]){
+                continue;
+            }
             [userApps addObject:proxy];
         } @catch (__unused NSException *e) {
             continue;

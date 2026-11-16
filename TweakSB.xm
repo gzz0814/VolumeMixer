@@ -79,9 +79,18 @@ static void VMPostSchemeNotify(NSURL *url){
 - (BOOL)canOpenURL:(NSURL *)url;
 - (BOOL)openURL:(NSURL *)url;
 - (BOOL)openURL:(NSURL *)url options:(NSDictionary *)options withCompletionCallback:(void(^)(NSInteger, id, NSError *))callback;
+- (BOOL)openURL:(NSURL *)url options:(NSDictionary *)options withCompletionCallback:(void(^)(NSInteger, id, NSError *))callback error:(id *)error;
 @end
 %group url
 %hook UIApplication
+- (BOOL)canOpenURL:(NSURL *)url{
+    // Shortcuts' "Open URL" validates here first; without this the action errors
+    // with "no app installed" before it can ever reach the open handlers below.
+    if([url.scheme isEqualToString:@"volumemixer"]){
+        return YES;
+    }
+    return %orig;
+}
 - (BOOL)openURL:(NSURL *)url{
     if([url.scheme isEqualToString:@"volumemixer"]){
         VMPostSchemeNotify(url);
@@ -128,6 +137,14 @@ static void VMPostSchemeNotify(NSURL *url){
     return %orig;
 }
 - (BOOL)openURL:(NSURL *)url options:(NSDictionary *)options withCompletionCallback:(void(^)(NSInteger, id, NSError *))callback{
+    if([url.scheme isEqualToString:@"volumemixer"]){
+        VMPostSchemeNotify(url);
+        if(callback) callback(0, nil, nil);
+        return YES;
+    }
+    return %orig;
+}
+- (BOOL)openURL:(NSURL *)url options:(NSDictionary *)options withCompletionCallback:(void(^)(NSInteger, id, NSError *))callback error:(id *)error{
     if([url.scheme isEqualToString:@"volumemixer"]){
         VMPostSchemeNotify(url);
         if(callback) callback(0, nil, nil);
