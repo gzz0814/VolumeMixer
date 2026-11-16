@@ -40,5 +40,6 @@ Credit: onewayticket255";
 "CONFIRM"="确认";
 "ICON_SIZE"="图标大小";
 "ICON_SIZE_FOOTER"="调音面板里每个应用图标的统一大小（单位：点）。";
-"SHORTCUTS_TITLE"="快捷指令 / URL Scheme";
-"SHORTCUTS_FOOTER"="在快捷指令中使用“打开 URL”动作，填 volumemixer://show 可呼出调音面板，volumemixer://hide 可关闭。";
+"SHORTCUTS_TITLE"="快捷指令 / 本地服务";
+"SHORTCUTS_FOOTER"="在快捷指令中使用“获取 URL 内容”动作，填 http://localhost:端口/show 呼出面板，/hide 关闭，/toggle 切换。（不要使用“打开 URL”，那需要宿主 App 会切换前台）";
+"HTTP_PORT"="本地服务端口";

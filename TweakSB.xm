@@ -19,10 +19,16 @@ VMHUDWindow *hudWindow = nil;
 VMHUDRootViewController *rootViewController = nil;
 static BOOL byVolumeButton = NO;
 
+static void VMStartURLServer(void);
+
 static void loadPref(){
     byVolumeButton = [g_defaults objectForKey:kPrefByVolumeButtonKey] ? [g_defaults boolForKey:kPrefByVolumeButtonKey] : NO;
 
     [rootViewController loadPref];
+
+    // (Re)start the loopback server if the configured port changed, so the
+    // Shortcuts "Get Contents of URL" endpoint follows the setting live.
+    VMStartURLServer();
 }
 
 static void showHUDWindowSB(){
@@ -81,26 +87,54 @@ static void VMPostSchemeNotify(NSURL *url){
 // (which is always injected) runs a loopback-only HTTP server; the Shortcuts
 // "Get Contents of URL" action fetches http://localhost:8020/show and we reveal /
 // dismiss the panel here. No companion app, no home-screen icon, no app switch.
+static int g_vmListenFd = -1;
+static int g_vmPort = 0;
+
 static void VMStartURLServer(void){
+    id pv = g_defaults ? [g_defaults objectForKey:kPrefHTTPPortKey] : nil;
+    int port = 0;
+    if([pv isKindOfClass:NSString.class]){
+        port = [(NSString *)pv intValue];
+    }
+    else if([pv isKindOfClass:NSNumber.class]){
+        port = [(NSNumber *)pv intValue];
+    }
+    if(port <= 0 || port > 65535){
+        port = 8020;
+    }
+    if(port == g_vmPort && g_vmListenFd >= 0){
+        return; // already serving on this port
+    }
+    if(g_vmListenFd >= 0){
+        close(g_vmListenFd); // unblock the previous accept loop so its thread exits
+        g_vmListenFd = -1;
+    }
+    int srv = socket(AF_INET, SOCK_STREAM, 0);
+    if(srv < 0){
+        return;
+    }
+    int yes = 1;
+    setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // 127.0.0.1 only
+    if(bind(srv, (struct sockaddr *)&addr, sizeof(addr)) < 0 || listen(srv, 16) < 0){
+        close(srv);
+        return;
+    }
+    g_vmListenFd = srv;
+    g_vmPort = port;
+    int mySrv = srv;
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-        int srv = socket(AF_INET, SOCK_STREAM, 0);
-        if(srv < 0){
-            return;
-        }
-        int yes = 1;
-        setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
-        struct sockaddr_in addr;
-        memset(&addr, 0, sizeof(addr));
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(8020);
-        addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // 127.0.0.1 only
-        if(bind(srv, (struct sockaddr *)&addr, sizeof(addr)) < 0 || listen(srv, 16) < 0){
-            close(srv);
-            return;
-        }
         for(;;){
-            int c = accept(srv, NULL, NULL);
+            int c = accept(mySrv, NULL, NULL);
             if(c < 0){
+                if(mySrv != g_vmListenFd){
+                    break; // socket was replaced for a restart
+                }
+                usleep(20000);
                 continue;
             }
             char buf[2048];

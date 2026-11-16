@@ -40,5 +40,6 @@ Turn off two web audio options if webpages stuck or failed to load.";
 "CONFIRM"="Confirm";
 "ICON_SIZE"="Icon Size";
 "ICON_SIZE_FOOTER"="Uniform size (points) for every app icon in the mixer panel.";
-"SHORTCUTS_TITLE"="Shortcuts / URL Scheme";
-"SHORTCUTS_FOOTER"="Use the Shortcuts \"Open URL\" action with volumemixer://show to reveal the mixer panel, or volumemixer://hide to dismiss it.";
+"SHORTCUTS_TITLE"="Shortcuts / Local Server";
+"SHORTCUTS_FOOTER"="Use the Shortcuts \"Get Contents of URL\" action with http://localhost:PORT/show to reveal the panel, /hide to dismiss, /toggle to switch. (Do NOT use \"Open URL\" \u2014 that needs a host app and switches to the foreground.)";
+"HTTP_PORT"="Local server port";

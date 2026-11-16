@@ -27,6 +27,68 @@
 - (id)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath specifier:(PSSpecifier *)specifier;
 @end
 
+// Resolve an app icon inside the (sandboxed) Settings process. The UIKit icon
+// cache API is tried first with a couple of formats; if it returns nothing we
+// fall back to reading the icon PNG straight out of the app bundle.
+static UIImage *VMAppIconImage(NSString *bundleID, id proxy){
+    if(![bundleID length]){
+        return nil;
+    }
+    CGFloat scale = [UIScreen mainScreen].scale;
+    UIImage *img = nil;
+    for(NSNumber *fmt in @[@(0), @(1), @(2)]){
+        @try {
+            img = [UIImage _applicationIconImageForBundleIdentifier:bundleID format:fmt.integerValue scale:scale];
+        } @catch (__unused NSException *e) {}
+        if(img){
+            return img;
+        }
+    }
+    NSURL *bundleURL = nil;
+    @try {
+        bundleURL = [proxy bundleURL];
+    } @catch (__unused NSException *e) {}
+    NSString *path = bundleURL.path;
+    if(![path length]){
+        return nil;
+    }
+    NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:[path stringByAppendingPathComponent:@"Info.plist"]];
+    if(![info isKindOfClass:[NSDictionary class]]){
+        return nil;
+    }
+    NSMutableArray *names = [NSMutableArray new];
+    id icons = info[@"CFBundleIcons"];
+    if([icons isKindOfClass:[NSDictionary class]]){
+        id primary = ((NSDictionary *)icons)[@"CFBundlePrimaryIcon"];
+        if([primary isKindOfClass:[NSDictionary class]]){
+            id files = ((NSDictionary *)primary)[@"CFBundleIconFiles"];
+            if([files isKindOfClass:[NSArray class]]){
+                [names addObjectsFromArray:files];
+            }
+        }
+    }
+    id single = info[@"CFBundleIconFile"];
+    if([single isKindOfClass:[NSString class]] && [single length]){
+        [names addObject:single];
+    }
+    NSFileManager *fm = NSFileManager.defaultManager;
+    for(NSString *base in [names reverseObjectEnumerator]){
+        NSArray *candidates = @[[NSString stringWithFormat:@"%@@3x.png", base],
+                                [NSString stringWithFormat:@"%@@2x.png", base],
+                                [NSString stringWithFormat:@"%@.png", base]];
+        for(NSString *fn in candidates){
+            NSString *full = [path stringByAppendingPathComponent:fn];
+            if([fm fileExistsAtPath:full]){
+                img = [UIImage imageWithContentsOfFile:full];
+                if(img){
+                    return img;
+                }
+            }
+        }
+    }
+    return nil;
+}
+
 @implementation VMAppListController {
     NSMutableArray *_selected;   // array of selected bundle identifiers
     NSArray *_apps;              // filtered + sorted LSApplicationProxy objects
@@ -174,6 +236,7 @@
                                                                  cell:PSSwitchCell
                                                                   edit:nil];
             [spec setProperty:bundleID forKey:@"bundleID"];
+            [spec setProperty:proxy forKey:@"proxy"];
             [specs addObject:spec];
         }
 
@@ -211,10 +274,25 @@
 // (indentationLevel/Width) to make room for it without overlapping the title.
 - (id)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath specifier:(PSSpecifier *)specifier {
     UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath specifier:specifier];
-    if(![cell isKindOfClass:[UITableViewCell class]]){
-        return cell;
+    [self vm_configureCell:cell specifier:specifier];
+    return cell;
+}
+
+// Hedge: some PreferenceLoader builds populate rows through the plain table
+// delegate method instead of the specifier variant, so cover that too. The icon
+// view is tag-guarded, so running both paths never duplicates it.
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
+    NSArray *specs = self.specifiers;
+    if([cell isKindOfClass:[UITableViewCell class]] && indexPath.row < (NSInteger)specs.count){
+        [self vm_configureCell:cell specifier:specs[indexPath.row]];
     }
+    return cell;
+}
+
+- (void)vm_configureCell:(UITableViewCell *)cell specifier:(PSSpecifier *)specifier {
     NSString *bundleID = [specifier propertyForKey:@"bundleID"];
+    id proxy = [specifier propertyForKey:@"proxy"];
     cell.indentationLevel = 1;
     cell.indentationWidth = 40.;
 
@@ -230,10 +308,7 @@
     }
     CGFloat rowHeight = cell.contentView.bounds.size.height;
     iconView.frame = CGRectMake(12., (rowHeight - 29.) / 2., 29., 29.);
-    if([bundleID length]){
-        iconView.image = [UIImage _applicationIconImageForBundleIdentifier:bundleID format:0 scale:[UIScreen mainScreen].scale];
-    }
-    return cell;
+    iconView.image = VMAppIconImage(bundleID, proxy);
 }
 
 @end

@@ -18,6 +18,7 @@
 #define kPrefIsHideBackgroundKey @"com.brend0n.volumemixer_isHideBackground"
 #define kPrefShowsOnLockScreenKey @"com.brend0n.volumemixer_showsOnLockScreen"
 #define kPrefIconSizeKey @"com.brend0n.volumemixer_iconSize"
+#define kPrefHTTPPortKey @"com.brend0n.volumemixer_httpPort"
 
 // Runtime registry of enabled apps that have launched, mapping bundleID -> pid.
 // Replaces MRYIPC's mach-bootstrap transport (which crashes sandboxed apps on
@@ -29,7 +30,7 @@
 #define kPrefScalesKey @"com.brend0n.volumemixer_scales"
 #define kPrefDidShowReleaseAlertKey @"com.brend0n.volumemixer_didShowReleaseAlert"
 
-#define kAllPrefKeys @[kPrefAppsKey, kPrefWebEnabledKey, kPrefWebAudioUnitHookEnabledKey, kPrefByVolumeButtonKey, kPrefIsHideInactiveAppsKey, kPrefAudioMixEnabledKey, kPrefAudiomixAppsKey, kPrefPanelPortraitYKey, kPrefPanelLandScapeYKey, kPrefIsHideBackgroundKey, kPrefShowsOnLockScreenKey, kPrefIconSizeKey, kPrefRunningAppsKey, kPrefScalesKey, kPrefDidShowReleaseAlertKey]
+#define kAllPrefKeys @[kPrefAppsKey, kPrefWebEnabledKey, kPrefWebAudioUnitHookEnabledKey, kPrefByVolumeButtonKey, kPrefIsHideInactiveAppsKey, kPrefAudioMixEnabledKey, kPrefAudiomixAppsKey, kPrefPanelPortraitYKey, kPrefPanelLandScapeYKey, kPrefIsHideBackgroundKey, kPrefShowsOnLockScreenKey, kPrefIconSizeKey, kPrefHTTPPortKey, kPrefRunningAppsKey, kPrefScalesKey, kPrefDidShowReleaseAlertKey]
 
 #if DEBUG
 #else
