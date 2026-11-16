@@ -69,8 +69,10 @@ static NSString *const kVMCellID = @"hudCell";
 }
 
 - (void)reloadRunningApp {
-    LSApplicationWorkspace *ws = [LSApplicationWorkspace defaultWorkspace];
-    self.runningBundleIDs = [ws allRunningApplications] ?: @[];
+    Class cls = NSClassFromString(@"LSApplicationWorkspace");
+    id ws = cls ? [cls performSelector:@selector(defaultWorkspace)] : nil;
+    NSArray *apps = ws ? [ws performSelector:@selector(allRunningApplications)] : nil;
+    self.runningBundleIDs = apps ?: @[];
     [self.collectionView reloadData];
 }
 
@@ -95,8 +97,10 @@ static NSString *const kVMCellID = @"hudCell";
     // into the same square with the iOS corner mask.
     CGFloat scale = [UIScreen mainScreen].scale;
     CGFloat side = [VolumeControl sharedInstance].iconSide;
-    UIImage *raw = [[LSApplicationWorkspace defaultWorkspace]
-        _applicationIconImageForBundleIdentifier:bid format:0 scale:scale];
+    Class cls = NSClassFromString(@"LSApplicationWorkspace");
+    id ws = cls ? [cls performSelector:@selector(defaultWorkspace)] : nil;
+    UIImage *raw = ws ? [(LSApplicationWorkspace *)ws
+        _applicationIconImageForBundleIdentifier:bid format:0 scale:scale] : nil;
     UIImage *icon = [raw vm_iconNormalizedToSide:side scale:scale];
     cell.row.iconView.image = icon;
 
