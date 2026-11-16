@@ -61,7 +61,7 @@ static NSMutableArray<VMIPCCenter *> *gInstances;
     NSString *method = payload[@"method"];
     if (!method) return;
 
-    id (^)(NSDictionary *)handler = nil;
+    id (^handler)(NSDictionary *) = nil;
     @synchronized (gHandlers) {
         handler = gHandlers[method];
     }
