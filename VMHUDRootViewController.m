@@ -5,7 +5,6 @@
 #import "MTMaterialView.h"
 #import "FrontBoard.h"
 #import "_UIBackdropView.h"
-#import "MRYIPC/MRYIPCCenter.h"
 #import <objc/runtime.h>
 #import <notify.h>
 #import <UIKit/UIImage+Private.h>
@@ -23,7 +22,7 @@
 #define kIconSize 29.
 
 @implementation VMHUDRootViewController {
-    MRYIPCCenter *_center;
+    int _appsNotifyToken;
     CGFloat _panelPortraitY;
     CGFloat _panelLandScapeY;
     BOOL _isHideInactiveApps;
@@ -93,7 +92,7 @@
     [self.view addGestureRecognizer:longPress];
     longPress.minimumPressDuration = 0;
 
-    [self registerExistingApps];
+    [self reloadRegisteredApps];
 }
 // credits to https://twitter.com/aydenpanhuyzen/status/1205981139086782469
 - (BOOL)_canShowWhileLocked {
@@ -245,40 +244,44 @@
 }
 
 - (void)initServer {
-    _center = [MRYIPCCenter centerNamed:@"com.brend0n.volumemixer/register"];
-    [_center addTarget:self action:@selector(register:)];
-}
-//receive bundleID
-- (void)register:(NSDictionary *)args {
-    NSLog(@"registering...");
-    NSString *bundleID = args[@"bundleID"];
-    NSNumber *pid = args[@"pid"];
-    NSString *appNotify = [NSString stringWithFormat:@"com.brend0n.volumemixer/%@~%d/setVolume", bundleID, pid.intValue];
-    NSLog(@"appNotify: %@", appNotify);
-
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [_bundleIDs addObject:bundleID];
-        [_pids addObject:pid];
-
-        VMHUDView *hudView = [[VMHUDView alloc] initWithFrame:CGRectMake(0, 0, kHudWidth, kHudHeight)];
-        hudView.bundleID = bundleID;
-        MRYIPCCenter *client = [MRYIPCCenter centerNamed:appNotify];
-        hudView.valueDidChange = ^(CGFloat curScale){
-            [client callExternalVoidMethod:@selector(setVolume:) withArguments:@{ @"curScale": @(curScale) }];
-        };
-        [hudView initScale];
-        [_hudViews addObject:hudView];
-
-        [self reloadRunningApp];
+    // Apps announce themselves through a Darwin notification (see Tweak.xm).
+    // SpringBoard reads the shared registry and builds the panel; no mach
+    // bootstrap / MRYIPC involved.
+    notify_register_dispatch(kVMAppsChangedNotify, &_appsNotifyToken, dispatch_get_main_queue(), ^(int t){
+        [self reloadRegisteredApps];
     });
 }
-- (void)registerExistingApps{
-    for(NSString *bundleID in [g_defaults objectForKey:kPrefAppsKey]){
-        FBApplicationProcess *process = [[objc_getClass("FBProcessManager") sharedInstance] applicationProcessesForBundleIdentifier:bundleID].firstObject;
-        if(process.pid){
-            [self register:@{@"bundleID":bundleID, @"pid":@(process.pid)}];
-        }
+- (void)reloadRegisteredApps {
+    [g_defaults synchronize];
+    NSDictionary *apps = [g_defaults dictionaryForKey:kPrefRunningAppsKey] ?: @{};
+    for(NSString *bundleID in apps){
+        [self addAppIfMissing:bundleID pid:apps[bundleID]];
     }
+    [self reloadRunningApp];
+}
+- (void)addAppIfMissing:(NSString *)bundleID pid:(NSNumber *)pid {
+    if(![bundleID length] || !pid) return;
+    if([_bundleIDs containsObject:bundleID]) return;
+    // The registry persists across resprings, so it can hold stale pids for apps
+    // that have since quit; skip anything that is no longer running.
+    if(pid.intValue > 0 && kill(pid.intValue, 0) != 0) return;
+
+    [_bundleIDs addObject:bundleID];
+    [_pids addObject:pid];
+
+    VMHUDView *hudView = [[VMHUDView alloc] initWithFrame:CGRectMake(0, 0, kHudWidth, kHudHeight)];
+    hudView.bundleID = bundleID;
+    hudView.valueDidChange = ^(CGFloat curScale){
+        // Persist the scale to the shared suite, then wake just this app.
+        NSMutableDictionary *scales = [[g_defaults dictionaryForKey:kPrefScalesKey] mutableCopy] ?: [NSMutableDictionary new];
+        scales[bundleID] = @(curScale);
+        [g_defaults setObject:scales forKey:kPrefScalesKey];
+        [g_defaults synchronize];
+        NSString *volName = [NSString stringWithFormat:@"com.brend0n.volumemixer/volume/%@", bundleID];
+        notify_post(volName.UTF8String);
+    };
+    [hudView initScale];
+    [_hudViews addObject:hudView];
 }
 - (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator {
     [super viewWillTransitionToSize:size withTransitionCoordinator:coordinator];

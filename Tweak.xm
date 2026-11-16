@@ -1,6 +1,5 @@
 #import "VMHookInfo.h"
 #import "VMHookAudioUnit.hpp"
-#import "MRYIPC/MRYIPCCenter.h"
 
 #import <notify.h>
 #import <sys/mman.h>
@@ -407,38 +406,32 @@ static void setScale(double curScale){
     [lstAVSampleBufferAudioRenderer setVolume:g_curScale];
 }
 
-@interface VMAPPServer : NSObject
-@end
-@implementation VMAPPServer{
-    MRYIPCCenter *_center;
-}
-- (instancetype)initWithName:(NSString*)name{
-    if((self = [super init])){
-        _center = [MRYIPCCenter centerNamed:name];
-        [_center addTarget:self action:@selector(setVolume:)];
-    }
-    return self;
-}
-- (void)setVolume:(NSDictionary *)args{
-    double curScale = [args[@"curScale"] doubleValue];
-    setScale(curScale);
-}
-@end
-
-static VMAPPServer *appServer = nil;
-
 static void registerApp(){
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        //send bundleid
         NSString *bundleID = NSBundle.mainBundle.bundleIdentifier;
-        MRYIPCCenter *idClient = [MRYIPCCenter centerNamed:@"com.brend0n.volumemixer/register"];
-
         int pid = NSProcessInfo.processInfo.processIdentifier;
-        [idClient callExternalVoidMethod:@selector(register:) withArguments:@{@"bundleID":bundleID, @"pid":@(pid)}];
 
-        NSString *appNotify = [NSString stringWithFormat:@"com.brend0n.volumemixer/%@~%d/setVolume", bundleID, pid];
-        appServer = [[VMAPPServer alloc] initWithName:appNotify];
+        // Publish this app to SpringBoard through the shared preferences suite
+        // plus a Darwin notification. This replaces MRYIPC's mach-bootstrap
+        // transport, which throws an uncaught exception (crashing every enabled
+        // app) once iOS 15/16 sandboxing blocks the mach-lookup helper trick.
+        NSMutableDictionary *apps = [[g_defaults dictionaryForKey:kPrefRunningAppsKey] mutableCopy] ?: [NSMutableDictionary new];
+        apps[bundleID] = @(pid);
+        [g_defaults setObject:apps forKey:kPrefRunningAppsKey];
+        [g_defaults synchronize];
+        notify_post(kVMAppsChangedNotify);
+
+        // Listen for volume changes addressed specifically to this app.
+        NSString *volName = [NSString stringWithFormat:@"com.brend0n.volumemixer/volume/%@", bundleID];
+        int token;
+        notify_register_dispatch(volName.UTF8String, &token, dispatch_get_main_queue(), ^(int t){
+            [g_defaults synchronize];
+            NSNumber *scaleNumber = [g_defaults dictionaryForKey:kPrefScalesKey][bundleID];
+            if(scaleNumber){
+                setScale([scaleNumber doubleValue]);
+            }
+        });
     });
 }
 

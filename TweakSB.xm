@@ -54,6 +54,62 @@ static BOOL VMHandleVolumeMixerURL(NSURL *url){
     return YES;
 }
 
+// Translate a volumemixer:// URL into the matching Darwin notification.
+static void VMPostSchemeNotify(NSURL *url){
+    NSString *action = url.host.lowercaseString;
+    if(!action.length){
+        action = [[url.path stringByReplacingOccurrencesOfString:@"/" withString:@""] lowercaseString];
+    }
+    const char *name = "com.brend0n.volumemixer/toggle";
+    if([action isEqualToString:@"show"]){
+        name = "com.brend0n.volumemixer/show";
+    }
+    else if([action isEqualToString:@"hide"]){
+        name = "com.brend0n.volumemixer/hide";
+    }
+    notify_post(name);
+}
+
+// The Shortcuts "Open URL" action runs inside the caller process. A custom
+// scheme with no owning app is rejected by LaunchServices there, before it can
+// ever reach SpringBoard, so we intercept UIApplication's openURL: entry points
+// in every process the tweak loads and turn volumemixer:// into a Darwin notify
+// that SpringBoard listens for.
+%group url
+%hook UIApplication
+- (BOOL)openURL:(NSURL *)url{
+    if([url.scheme isEqualToString:@"volumemixer"]){
+        VMPostSchemeNotify(url);
+        return YES;
+    }
+    return %orig;
+}
+- (BOOL)openURL:(NSURL *)url options:(NSDictionary *)options{
+    if([url.scheme isEqualToString:@"volumemixer"]){
+        VMPostSchemeNotify(url);
+        return YES;
+    }
+    return %orig;
+}
+- (void)openURL:(NSURL *)url completionHandler:(void(^)(BOOL success))completion{
+    if([url.scheme isEqualToString:@"volumemixer"]){
+        VMPostSchemeNotify(url);
+        if(completion) completion(YES);
+        return;
+    }
+    %orig;
+}
+- (void)openURL:(NSURL *)url options:(NSDictionary *)options completionHandler:(void(^)(BOOL success))completion{
+    if([url.scheme isEqualToString:@"volumemixer"]){
+        VMPostSchemeNotify(url);
+        if(completion) completion(YES);
+        return;
+    }
+    %orig;
+}
+%end //UIApplication
+%end //url
+
 %group SB
 %hook SpringBoard
 - (void)applicationDidFinishLaunching:(id)application{
@@ -109,6 +165,7 @@ static BOOL VMHandleVolumeMixerURL(NSURL *url){
 %end //SB
 
 %ctor{
+    %init(url);
     if(!IN_SPRINGBOARD){
         return;
     }
@@ -130,5 +187,17 @@ static BOOL VMHandleVolumeMixerURL(NSURL *url){
     notify_register_dispatch("com.brend0n.volumemixer/toggle", &toggleToken, dispatch_get_main_queue(), ^(int t) {
         showHUDWindowSB();
         [hudWindow changeVisibility];
+    });
+
+    // Explicit reveal / dismiss from the volumemixer://show and :hide URL scheme.
+    int showToken;
+    notify_register_dispatch("com.brend0n.volumemixer/show", &showToken, dispatch_get_main_queue(), ^(int t) {
+        showHUDWindowSB();
+        [hudWindow showWindow];
+    });
+    int hideToken;
+    notify_register_dispatch("com.brend0n.volumemixer/hide", &hideToken, dispatch_get_main_queue(), ^(int t) {
+        showHUDWindowSB();
+        [hudWindow hideWindow];
     });
 }

@@ -19,10 +19,17 @@
 #define kPrefShowsOnLockScreenKey @"com.brend0n.volumemixer_showsOnLockScreen"
 #define kPrefIconSizeKey @"com.brend0n.volumemixer_iconSize"
 
+// Runtime registry of enabled apps that have launched, mapping bundleID -> pid.
+// Replaces MRYIPC's mach-bootstrap transport (which crashes sandboxed apps on
+// iOS 15/16). Apps publish themselves here and signal SpringBoard with a Darwin
+// notification; SpringBoard reads the dict and builds the mixer panel.
+#define kPrefRunningAppsKey @"com.brend0n.volumemixer_runningApps"
+#define kVMAppsChangedNotify "com.brend0n.volumemixer/appsChanged"
+
 #define kPrefScalesKey @"com.brend0n.volumemixer_scales"
 #define kPrefDidShowReleaseAlertKey @"com.brend0n.volumemixer_didShowReleaseAlert"
 
-#define kAllPrefKeys @[kPrefAppsKey, kPrefWebEnabledKey, kPrefWebAudioUnitHookEnabledKey, kPrefByVolumeButtonKey, kPrefIsHideInactiveAppsKey, kPrefAudioMixEnabledKey, kPrefAudiomixAppsKey, kPrefPanelPortraitYKey, kPrefPanelLandScapeYKey, kPrefIsHideBackgroundKey, kPrefShowsOnLockScreenKey, kPrefIconSizeKey, kPrefScalesKey, kPrefDidShowReleaseAlertKey]
+#define kAllPrefKeys @[kPrefAppsKey, kPrefWebEnabledKey, kPrefWebAudioUnitHookEnabledKey, kPrefByVolumeButtonKey, kPrefIsHideInactiveAppsKey, kPrefAudioMixEnabledKey, kPrefAudiomixAppsKey, kPrefPanelPortraitYKey, kPrefPanelLandScapeYKey, kPrefIsHideBackgroundKey, kPrefShowsOnLockScreenKey, kPrefIconSizeKey, kPrefRunningAppsKey, kPrefScalesKey, kPrefDidShowReleaseAlertKey]
 
 #if DEBUG
 #else
