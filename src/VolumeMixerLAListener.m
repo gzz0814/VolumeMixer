@@ -11,6 +11,7 @@
 // LAActivator is an optional dependency; we register dynamically so the tweak
 // still loads on devices without Activator installed.
 @protocol LAEvent <NSObject>
+- (void)handle;
 @end
 
 @interface VolumeMixerShowListener : NSObject
