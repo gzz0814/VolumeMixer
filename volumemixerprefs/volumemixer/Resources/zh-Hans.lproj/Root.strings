@@ -1,0 +1,10 @@
+CHOOSE_ENABLED_APP = "启用的应用";
+SHORTCUTS_FOOTER_TEXT = "你也可以在“快捷指令”中使用“打开 URL”动作，输入“volumemixer://show”来呼出面板。";
+BY_VOLUME_BUTTON = "通过音量键呼出";
+ICON_SIZE_GROUP = "图标大小";
+ICON_SIZE = "图标大小";
+ICON_SIZE_FOOTER_TEXT = "所有应用图标都会被缩放到该尺寸并套用 iOS 圆角遮罩，保持视觉一致。";
+ACTIVATOR_LISTENERS = "Activator 触发";
+ACTIVATOR_LISTENERS_FOOTER_TEXT = "为呼出或调节调音面板分配手势。";
+SHOW_PANEL = "显示调音面板";
+RESET_SETTINGS = "重置设置";

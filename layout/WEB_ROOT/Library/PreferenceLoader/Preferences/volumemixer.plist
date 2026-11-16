@@ -1,0 +1,10 @@
+{
+	Entry = {
+		cell = PSLinkCell;
+		label = VolumeMixer;
+		isController = 1;
+		bundle = volumemixer;
+		detail = "VMPrefRootListController";
+		icon = "icon.png";
+	};
+}

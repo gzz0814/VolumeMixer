@@ -1,0 +1,7 @@
+# Theos build artifacts
+.theos/
+packages/
+*.deb
+
+# macOS / editor noise
+.DS_Store

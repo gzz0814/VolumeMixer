@@ -1,0 +1,41 @@
+name: Build deb
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential clang lld llvm binutils-gold \
+            git curl wget perl python3 zip unzip fakeroot \
+            xz-utils liblzma-dev libxml2-dev libz-dev gnupg
+
+      - name: Install Theos
+        run: |
+          sh -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
+          echo "$HOME/theos/bin" >> "$GITHUB_PATH"
+
+      - name: Build package
+        run: |
+          make clean
+          make package FINAL=1
+        env:
+          THEOS: ${{ env.THEOS }}
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VolumeMixer-deb
+          path: packages/*.deb
+          if-no-files-found: error

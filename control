@@ -1,0 +1,10 @@
+Package: com.brend0n.volumemixer
+Section: Tweaks
+Maintainer: Brend0n <brendonjkding@126.com>
+Architecture: iphoneos-arm64e
+Version: 0.0.8
+Depends: mobilesubstrate, preferenceloader, com.opa334.altlist
+Pre-Depends: rootless-compat (>= 0.9)
+Description: Volume control for individual app. Adds a Shortcuts-friendly URL scheme and normalizes app icon sizing in the mixer panel.
+Name: VolumeMixer
+Author: Brend0n <brendonjkding@126.com>
