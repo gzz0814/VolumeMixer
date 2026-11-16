@@ -8,7 +8,7 @@ BUNDLE_NAME = volumemixer
 volumemixer_FILES = VMPrefRootListController.m
 volumemixer_INSTALL_PATH = /Library/PreferenceBundles
 volumemixer_FRAMEWORKS = UIKit
-volumemixer_PRIVATE_FRAMEWORKS = Preferences
+volumemixer_LDFLAGS = -undefined dynamic_lookup
 volumemixer_CFLAGS = -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/bundle.mk
