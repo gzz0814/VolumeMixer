@@ -1,0 +1,37 @@
+#ifdef __OBJC__
+
+#define kBundlePath @THEOS_PACKAGE_INSTALL_PREFIX"/Library/PreferenceBundles/volumemixer.bundle"
+
+#define kWebKitBundleId @"com.apple.WebKit.WebContent"
+
+#define VMNSLocalizedString(key) NSLocalizedStringFromTableInBundle((key), @"Root", [NSBundle bundleWithPath:kBundlePath], nil)
+
+#define kPrefAppsKey @"com.brend0n.volumemixer_apps"
+#define kPrefWebEnabledKey @"com.brend0n.volumemixer_webEnabled"
+#define kPrefWebAudioUnitHookEnabledKey @"com.brend0n.volumemixer_webAudioUnitHookEnabled"
+#define kPrefByVolumeButtonKey @"com.brend0n.volumemixer_byVolumeButton"
+#define kPrefIsHideInactiveAppsKey @"com.brend0n.volumemixer_isHideInactiveApps"
+#define kPrefAudioMixEnabledKey @"com.brend0n.volumemixer_audioMixEnabled"
+#define kPrefAudiomixAppsKey @"com.brend0n.volumemixer_audiomixApps"
+#define kPrefPanelPortraitYKey @"com.brend0n.volumemixer_panelPortraitY"
+#define kPrefPanelLandScapeYKey @"com.brend0n.volumemixer_panelLandScapeY"
+#define kPrefIsHideBackgroundKey @"com.brend0n.volumemixer_isHideBackground"
+#define kPrefShowsOnLockScreenKey @"com.brend0n.volumemixer_showsOnLockScreen"
+#define kPrefIconSizeKey @"com.brend0n.volumemixer_iconSize"
+
+#define kPrefScalesKey @"com.brend0n.volumemixer_scales"
+#define kPrefDidShowReleaseAlertKey @"com.brend0n.volumemixer_didShowReleaseAlert"
+
+#define kAllPrefKeys @[kPrefAppsKey, kPrefWebEnabledKey, kPrefWebAudioUnitHookEnabledKey, kPrefByVolumeButtonKey, kPrefIsHideInactiveAppsKey, kPrefAudioMixEnabledKey, kPrefAudiomixAppsKey, kPrefPanelPortraitYKey, kPrefPanelLandScapeYKey, kPrefIsHideBackgroundKey, kPrefShowsOnLockScreenKey, kPrefIconSizeKey, kPrefScalesKey, kPrefDidShowReleaseAlertKey]
+
+#if DEBUG
+#else
+#define NSLog(FORMAT, ...)
+#endif
+
+#define MRYIPCCenter VM_MRYIPCCenter
+#define _MRYIPCMethod VM__MRYIPCMethod
+
+#import <UIKit/UIKit.h>
+
+#endif //__OBJC__

@@ -1,13 +1,14 @@
-# Theos build artifacts
+.DS_Store
 .theos/
 packages/
-*.deb
+AppIcons/
+._*
+note*
+__*
 
-# macOS / editor noise
-.DS_Store
-
-# reverse-engineering scratch (not part of the package)
+# reverse-engineering / scratch (not part of package)
 _orig/
+_src/
 _*.py
-
 VolumeMixer-master.zip
+*.deb

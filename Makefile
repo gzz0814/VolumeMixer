@@ -1,27 +1,56 @@
-ARCHS = arm64 arm64e
-TARGET := iphone:clang:latest:14.0
-INSTALL_TARGET_PROCESSES = SpringBoard
+ifdef SIMULATOR
+export TARGET = simulator:clang:latest:8.0
+else
+export TARGET = iphone:clang:latest:7.0
+	ifeq ($(debug),0)
+		export ARCHS = armv7 arm64 arm64e
+	else
+		export ARCHS = arm64 arm64e
+	endif
+endif
 
-include $(THEOS)/makefiles/common.mk
+INSTALL_TARGET_PROCESSES = SpringBoard
 
 TWEAK_NAME = VolumeMixer
 
-VolumeMixer_FILES = \
-	src/Tweak.x \
-	src/VolumeControl.m \
-	src/VMHUDWindow.m \
-	src/VMHUDRootViewController.m \
-	src/VMHUDView.m \
-	src/VolumeMixerLAListener.m \
-	src/VMIPCCenter.m \
-	src/UIImage+VMIcon.m
+VolumeMixer_FILES = Tweak.xm VMHookInfo.mm VMHookAudioUnit.mm 
+VolumeMixer_FILES += MRYIPC/MRYIPCCenter.m
+VolumeMixer_CFLAGS = -fobjc-arc
+VolumeMixer_LIBRARIES += substrate
+VolumeMixer_LOGOSFLAGS += -c generator=MobileSubstrate
+# Private audio / SpringBoard symbols are resolved at load time in-process.
+VolumeMixer_LDFLAGS = -undefined dynamic_lookup
 
-VolumeMixer_CFLAGS = -fobjc-arc -Wno-deprecated-declarations
-VolumeMixer_FRAMEWORKS = UIKit Foundation CoreGraphics QuartzCore AVFoundation AudioToolbox
-VolumeMixer_LIBRARIES = substrate
-VolumeMixer_EXTRA_LDFLAGS = -undefined dynamic_lookup
+VolumeMixer_FILES += TweakSB.xm VMHUDView.m VMHUDWindow.m VMHUDRootViewController.m VMLAListener.m VMLAVolumeDownListener.m VMLAVolumeUpListener.m
+ifdef SIMULATOR
+VolumeMixer_FILES += sim.x
+endif
 
+BUNDLE_NAME = volumemixer CCVolumeMixer
+
+volumemixer_FILES = volumemixerpref/VMPrefRootListController.m volumemixerpref/BDInfoListController.m volumemixerpref/VMLicenseViewController.m volumemixerpref/VMAuthorListController.m
+volumemixer_INSTALL_PATH = /Library/PreferenceBundles
+volumemixer_FRAMEWORKS = UIKit
+# Preferences is a private framework whose stub is not in the iOS SDK; the
+# PS* classes are resolved at runtime by PreferenceLoader, so link dynamically.
+volumemixer_LDFLAGS = -undefined dynamic_lookup
+volumemixer_CFLAGS = -fobjc-arc
+volumemixer_RESOURCE_DIRS = volumemixerpref/Resources
+
+CCVolumeMixer_BUNDLE_EXTENSION = bundle
+CCVolumeMixer_FILES = ccvolumemixer/CCVolumeMixer.m
+CCVolumeMixer_CFLAGS = -fobjc-arc
+# ControlCenterUIKit stub is not in the SDK; CCUIToggleModule resolves at runtime.
+CCVolumeMixer_LDFLAGS = -undefined dynamic_lookup
+CCVolumeMixer_INSTALL_PATH = /Library/ControlCenter/Bundles/
+CCVolumeMixer_RESOURCE_DIRS = ccvolumemixer/Resources
+
+export ADDITIONAL_CFLAGS += -Wno-error=unused-variable -Wno-error=unused-function -Wno-error=unused-value -include Prefix.pch
+
+include $(THEOS)/makefiles/common.mk
 include $(THEOS_MAKE_PATH)/tweak.mk
+include $(THEOS_MAKE_PATH)/bundle.mk
 
-SUBPROJECTS += volumemixerprefs
-include $(THEOS_MAKE_PATH)/aggregate.mk
+internal-stage::
+	$(ECHO_NOTHING)mkdir -p $(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences$(ECHO_END)
+	$(ECHO_NOTHING)cp volumemixerpref/entry.plist $(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences/volumemixer.plist$(ECHO_END)
