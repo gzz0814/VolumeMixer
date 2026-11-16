@@ -3,10 +3,13 @@
 // resolve it (there is otherwise no host app, which is why the action errored
 // with "not installed"). When iOS opens a URL here we translate it into the
 // same Darwin notification that SpringBoard already listens for, so the mixer
-// panel shows/hides/toggles without needing the tweak to be injected into the
-// caller process.
+// panel shows/hides/toggles, and then we exit immediately: the launcher has no
+// UI and must not linger in the foreground, so the panel appears over whatever
+// app the user was already using (exactly like pressing the volume buttons).
 #import <UIKit/UIKit.h>
 #import <notify.h>
+
+static BOOL sDidPost = NO;
 
 static NSString *VMActionFromURL(NSURL *url){
     NSString *action = url.host.lowercaseString;
@@ -23,24 +26,44 @@ static NSString *VMActionFromURL(NSURL *url){
     return @"com.brend0n.volumemixer/toggle";
 }
 
+static void VMPostOnce(NSURL *url){
+    if(sDidPost){
+        return;
+    }
+    sDidPost = YES;
+    notify_post(VMActionFromURL(url).UTF8String);
+}
+
 @interface AppDelegate : NSObject <UIApplicationDelegate>
 @end
 
 @implementation AppDelegate
 
+- (void)vm_exitSoon {
+    // Give SpringBoard a moment to receive the notification, then quit so the
+    // launcher never stays in the foreground.
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        exit(0);
+    });
+}
+
+// Cold launch via URL (the normal case, since we always quit after handling):
+// the URL arrives in launchOptions. On some iOS versions the openURL: delegate
+// method is not called, so this is the reliable place to post.
 - (BOOL)application:(UIApplication *)application
-            openURL:(NSURL *)url
-            options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
-    notify_post(VMActionFromURL(url).UTF8String);
+    didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    VMPostOnce(launchOptions[UIApplicationLaunchOptionsURLKey]);
+    [self vm_exitSoon];
     return YES;
 }
 
-// Launched directly (e.g. Shortcuts "Open App") with no URL: toggle the panel.
+// Warm launch (app already running) — guarded by sDidPost so we never double
+// fire (a double "toggle" would cancel itself out).
 - (BOOL)application:(UIApplication *)application
-    didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    if(!launchOptions[UIApplicationLaunchOptionsURLKey]){
-        notify_post("com.brend0n.volumemixer/toggle");
-    }
+            openURL:(NSURL *)url
+            options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
+    VMPostOnce(url);
+    [self vm_exitSoon];
     return YES;
 }
 

@@ -7,6 +7,7 @@
 @interface LSApplicationWorkspace : NSObject
 + (instancetype)defaultWorkspace;
 - (NSArray *)allApplications;
+- (NSArray *)deviceApplications;
 @end
 
 @interface LSApplicationProxy : NSObject
@@ -43,7 +44,18 @@
 
     Class LSClass = objc_getClass("LSApplicationWorkspace");
     id workspace = LSClass ? [LSClass defaultWorkspace] : nil;
-    NSArray *all = workspace ? [workspace allApplications] : nil;
+    // deviceApplications returns the real installed apps and omits the hundreds
+    // of system UI agents (ViewServices, dialogs, ...) that allApplications
+    // dumps in; fall back to allApplications only if it is unavailable/empty.
+    NSArray *all = nil;
+    @try {
+        if([workspace respondsToSelector:@selector(deviceApplications)]){
+            all = [workspace deviceApplications];
+        }
+    } @catch (__unused NSException *e) {}
+    if(![all count]){
+        all = [workspace allApplications];
+    }
 
     // Keep only real, home-screen apps. This drops the hundreds of system UI
     // agents (AAUIViewService, AirDropUI, Bark, CarPlaySplashScreen, ...).
