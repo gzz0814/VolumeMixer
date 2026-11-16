@@ -30,10 +30,6 @@ jobs:
         run: |
           make clean
           make package FINAL=1
-        env:
-          THEOS: ${{ env.THEOS }}
-          # Auto-download the iOS SDK on first build without prompting.
-          THEOS_AUTO_DOWNLOAD_SDK: 1
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
