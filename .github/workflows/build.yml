@@ -26,6 +26,11 @@ jobs:
           xcrun --sdk iphoneos --show-sdk-path
           ls "${THEOS}/bin"
 
+      - name: Install ldid (codesign tool)
+        run: |
+          brew install ldid-procursus || brew install ldid || brew install theos/theos/ldid
+          which ldid
+
       - name: Build package
         run: |
           make clean
