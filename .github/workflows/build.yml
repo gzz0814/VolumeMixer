@@ -28,8 +28,9 @@ jobs:
 
       - name: Build package
         run: |
+          chmod +x "${THEOS}/bin/"* 2>/dev/null || true
           make clean
-          make package FINAL=1 THEOS_PLATFORM_DPKG_DEB=dpkg-deb
+          make package FINAL=1 _THEOS_PLATFORM_DPKG_DEB=dpkg-deb
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
