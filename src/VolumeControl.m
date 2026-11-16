@@ -83,19 +83,18 @@
 }
 
 - (void)showPanel {
-    if (!self.hudWindow) {
-        CGRect frame = [UIScreen mainScreen].bounds;
-        self.hudWindow = [[VMHUDWindow alloc] initWithFrame:frame];
-    }
-    [self.hudWindow showWindow];
+    // Use the shared window so the Control Center tile and the notification /
+    // URL-scheme paths all drive the same panel instance.
+    [[VMHUDWindow sharedWindow] showWindow];
 }
 
 - (void)hidePanel {
-    [self.hudWindow hideWindow];
+    [[VMHUDWindow sharedWindow] hideWindow];
 }
 
 - (void)togglePanel {
-    if (self.hudWindow && !self.hudWindow.hidden) {
+    VMHUDWindow *window = [VMHUDWindow sharedWindow];
+    if (!window.hidden) {
         [self hidePanel];
     } else {
         [self showPanel];

@@ -5,3 +5,9 @@ packages/
 
 # macOS / editor noise
 .DS_Store
+
+# reverse-engineering scratch (not part of the package)
+_orig/
+_*.py
+
+VolumeMixer-master.zip

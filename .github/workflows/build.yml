@@ -42,3 +42,23 @@ jobs:
           name: VolumeMixer-deb
           path: packages/*.deb
           if-no-files-found: error
+
+      - name: Publish to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA="$(git rev-parse HEAD)"
+          SHORT="${SHA:0:7}"
+          # Rolling prerelease that always points at the newest successful build.
+          if ! gh release view latest-build >/dev/null 2>&1; then
+            gh release create latest-build \
+              --target "$SHA" \
+              --title "VolumeMixer latest build" \
+              --prerelease \
+              --notes "Automated build from commit $SHORT."
+          else
+            gh release edit latest-build --target "$SHA" \
+              --title "VolumeMixer latest build" \
+              --notes "Automated build from commit $SHORT."
+          fi
+          gh release upload latest-build packages/*.deb --clobber
