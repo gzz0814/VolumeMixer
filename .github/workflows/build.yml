@@ -16,15 +16,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential clang lld llvm binutils-gold \
+            build-essential clang lld llvm binutils \
             git curl wget perl python3 zip unzip fakeroot \
-            xz-utils liblzma-dev libxml2-dev libz-dev gnupg
+            xz-utils liblzma-dev libxml2-dev libz-dev libssl-dev gnupg
 
-      - name: Install Theos
+      - name: Install Theos (clone, non-interactive)
         run: |
-          sh -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
-          echo "$HOME/theos/bin" >> "$GITHUB_PATH"
+          git clone --depth=1 https://github.com/theos/theos.git "${RUNNER_TEMP}/theos"
+          echo "THEOS=${RUNNER_TEMP}/theos" >> "$GITHUB_ENV"
+          echo "${RUNNER_TEMP}/theos/bin" >> "$GITHUB_PATH"
 
       - name: Build package
         run: |
@@ -32,6 +32,8 @@ jobs:
           make package FINAL=1
         env:
           THEOS: ${{ env.THEOS }}
+          # Auto-download the iOS SDK on first build without prompting.
+          THEOS_AUTO_DOWNLOAD_SDK: 1
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
