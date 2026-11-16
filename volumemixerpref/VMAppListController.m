@@ -87,15 +87,13 @@
 }
 
 - (void)vm_setupSearchBar {
-    if(!objc_getClass("UISearchController")){
-        return;
+    if(@available(iOS 11.0, *)){
+        UISearchController *searchController = [[UISearchController alloc] initWithSearchResultsController:nil];
+        searchController.searchResultsUpdater = self;
+        searchController.dimsBackgroundDuringPresentation = NO;
+        self.navigationItem.searchController = searchController;
+        self.definesPresentationContext = YES;
     }
-    UISearchController *searchController = [[UISearchController alloc] initWithSearchResultsController:nil];
-    searchController.searchResultsUpdater = self;
-    searchController.dimsBackgroundDuringPresentation = NO;
-    searchController.hidesSearchBarWhenScrolling = NO;
-    self.navigationItem.searchController = searchController;
-    self.definesPresentationContext = YES;
 }
 
 - (void)updateSearchResultsForSearchController:(UISearchController *)searchController {
