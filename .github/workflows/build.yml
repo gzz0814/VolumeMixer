@@ -17,13 +17,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential clang lld llvm binutils \
-            git curl wget perl python3 zip unzip fakeroot \
+            git git-lfs curl wget perl python3 zip unzip fakeroot \
             xz-utils liblzma-dev libxml2-dev libz-dev libssl-dev gnupg
 
       - name: Install Theos (clone, non-interactive)
         run: |
           git clone --depth=1 https://github.com/theos/theos.git "${RUNNER_TEMP}/theos"
+          git -C "${RUNNER_TEMP}/theos" lfs install
           git -C "${RUNNER_TEMP}/theos" submodule update --init --recursive
+          git -C "${RUNNER_TEMP}/theos" lfs pull
           echo "THEOS=${RUNNER_TEMP}/theos" >> "$GITHUB_ENV"
           echo "${RUNNER_TEMP}/theos/bin" >> "$GITHUB_PATH"
 

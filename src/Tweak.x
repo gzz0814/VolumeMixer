@@ -82,6 +82,7 @@ static BOOL VMHandledURL(NSURL *url) {
 // These hooks live in a %group so they are only installed inside SpringBoard
 // itself (the class does not exist in other injected processes).
 %group VMSpringBoard
+%hook SpringBoard
 
 - (BOOL)application:(id)application openURL:(NSURL *)url options:(NSDictionary *)options {
     if (VMHandledURL(url)) return YES;
@@ -101,6 +102,7 @@ static BOOL VMHandledURL(NSURL *url) {
     return %orig;
 }
 
+%end
 %end
 
 %ctor {
