@@ -13,8 +13,7 @@
 - (NSString *)bundleIdentifier;
 - (NSString *)localizedName;
 - (NSUInteger)applicationType;
-- (BOOL)isDockable;
-- (BOOL)hidden;
+- (NSURL *)bundleURL;
 @end
 
 @implementation VMAppListController {
@@ -47,8 +46,12 @@
     NSArray *all = workspace ? [workspace allApplications] : nil;
 
     // Keep only real, home-screen apps. This drops the hundreds of system UI
-    // agents (AAUIViewService, AirDropUI, Bark, CarPlaySplashScreen, ...) that
-    // would otherwise bury the apps the user actually wants.
+    // agents (AAUIViewService, AirDropUI, Bark, CarPlaySplashScreen, ...).
+    // NB: isDockable is only meaningful inside SpringBoard and reads NO for every
+    // app from the preferences process, so filter by bundle location instead:
+    // keep App Store (/var/containers), jailbreak (/var/jb, /Applications) and
+    // Apple's own apps (/System/Applications); drop everything under
+    // /System/Library and XPC services.
     NSMutableArray *list = [NSMutableArray new];
     for(LSApplicationProxy *proxy in all){
         NSString *bundleID = nil;
@@ -57,11 +60,11 @@
             if([proxy respondsToSelector:@selector(applicationType)] && [proxy applicationType] != 0){
                 continue; // 0 == LSApplicationProxyTypeApplicationUser
             }
-            if([proxy respondsToSelector:@selector(isDockable)] && ![proxy isDockable]){
-                continue;
-            }
-            if([proxy respondsToSelector:@selector(hidden)] && [proxy hidden]){
-                continue;
+            if([proxy respondsToSelector:@selector(bundleURL)]){
+                NSString *path = [proxy bundleURL].path ?: @"";
+                if([path hasPrefix:@"/System/Library/"] || [path containsString:@"/XPCServices/"]){
+                    continue;
+                }
             }
             bundleID = [proxy bundleIdentifier];
             name = [proxy respondsToSelector:@selector(localizedName)] ? [proxy localizedName] : nil;
