@@ -206,15 +206,32 @@
 }
 
 // Feature #1: show each app's icon next to its name. PSListController builds a
-// PSSwitchCell per specifier; we let it create the cell and then drop the icon
-// into the cell's imageView, keyed off the bundleID stored on the specifier.
+// PSSwitchCell per specifier, but that cell ignores its built-in imageView, so
+// we add our own icon subview to the content view and indent the row content
+// (indentationLevel/Width) to make room for it without overlapping the title.
 - (id)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath specifier:(PSSpecifier *)specifier {
-    id cell = [super tableView:tableView cellForRowAtIndexPath:indexPath specifier:specifier];
+    UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath specifier:specifier];
+    if(![cell isKindOfClass:[UITableViewCell class]]){
+        return cell;
+    }
     NSString *bundleID = [specifier propertyForKey:@"bundleID"];
-    if([bundleID length] && [cell isKindOfClass:[UITableViewCell class]]){
-        UIImage *icon = [UIImage _applicationIconImageForBundleIdentifier:bundleID format:0 scale:[UIScreen mainScreen].scale];
-        ((UITableViewCell *)cell).imageView.image = icon;
-        ((UITableViewCell *)cell).imageView.highlightedImage = nil;
+    cell.indentationLevel = 1;
+    cell.indentationWidth = 40.;
+
+    static const NSInteger kIconTag = 47821;
+    UIImageView *iconView = (UIImageView *)[cell.contentView viewWithTag:kIconTag];
+    if(![iconView isKindOfClass:[UIImageView class]]){
+        iconView = [[UIImageView alloc] initWithFrame:CGRectMake(12., 0., 29., 29.)];
+        iconView.tag = kIconTag;
+        iconView.contentMode = UIViewContentModeScaleAspectFit;
+        iconView.layer.cornerRadius = 6.;
+        iconView.layer.masksToBounds = YES;
+        [cell.contentView addSubview:iconView];
+    }
+    CGFloat rowHeight = cell.contentView.bounds.size.height;
+    iconView.frame = CGRectMake(12., (rowHeight - 29.) / 2., 29., 29.);
+    if([bundleID length]){
+        iconView.image = [UIImage _applicationIconImageForBundleIdentifier:bundleID format:0 scale:[UIScreen mainScreen].scale];
     }
     return cell;
 }

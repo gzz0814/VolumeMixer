@@ -3,6 +3,11 @@
 #import <notify.h>
 #import <theos/IOSMacros.h>
 #import "TweakSB.h"
+#import <sys/socket.h>
+#import <netinet/in.h>
+#import <arpa/inet.h>
+#import <unistd.h>
+#import <string.h>
 
 @interface AXPassthroughWindow : UIWindow
 + (id)sharedInstance;
@@ -68,6 +73,72 @@ static void VMPostSchemeNotify(NSURL *url){
         name = "com.brend0n.volumemixer/hide";
     }
     notify_post(name);
+}
+
+// Feature #2 (roothide fallback): the tweak is not injected into the Shortcuts
+// process on this jailbreak, so the canOpenURL/openURL hooks above never run
+// there and "Open URL" reports the scheme as not installed. Instead SpringBoard
+// (which is always injected) runs a loopback-only HTTP server; the Shortcuts
+// "Get Contents of URL" action fetches http://localhost:8020/show and we reveal /
+// dismiss the panel here. No companion app, no home-screen icon, no app switch.
+static void VMStartURLServer(void){
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        int srv = socket(AF_INET, SOCK_STREAM, 0);
+        if(srv < 0){
+            return;
+        }
+        int yes = 1;
+        setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+        struct sockaddr_in addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(8020);
+        addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // 127.0.0.1 only
+        if(bind(srv, (struct sockaddr *)&addr, sizeof(addr)) < 0 || listen(srv, 16) < 0){
+            close(srv);
+            return;
+        }
+        for(;;){
+            int c = accept(srv, NULL, NULL);
+            if(c < 0){
+                continue;
+            }
+            char buf[2048];
+            ssize_t n = read(c, buf, sizeof(buf) - 1);
+            NSString *action = @"toggle";
+            if(n > 0){
+                buf[n] = 0;
+                NSString *req = [NSString stringWithUTF8String:buf];
+                NSArray *lines = [req componentsSeparatedByString:@"\r\n"];
+                if(lines.count){
+                    NSArray *parts = [lines[0] componentsSeparatedByString:@" "];
+                    if(parts.count >= 2){
+                        NSString *path = [parts[1] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"/"]];
+                        if(path.length){
+                            action = path.lowercaseString;
+                        }
+                    }
+                }
+            }
+            NSString *act = [action copy];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                showHUDWindowSB();
+                if([act isEqualToString:@"show"]){
+                    [hudWindow showWindow];
+                }
+                else if([act isEqualToString:@"hide"]){
+                    [hudWindow hideWindow];
+                }
+                else{
+                    [hudWindow changeVisibility];
+                }
+            });
+            const char *resp = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\nConnection: close\r\n\r\nOK";
+            ssize_t w = write(c, resp, strlen(resp));
+            (void)w;
+            close(c);
+        }
+    });
 }
 
 // The Shortcuts "Open URL" action runs inside the caller process. A custom
@@ -245,4 +316,8 @@ static void VMPostSchemeNotify(NSURL *url){
         showHUDWindowSB();
         [hudWindow hideWindow];
     });
+
+    // Loopback HTTP server so Shortcuts "Get Contents of URL" can reveal the
+    // panel without a companion app (see VMStartURLServer).
+    VMStartURLServer();
 }
