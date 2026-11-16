@@ -451,7 +451,7 @@ static void registerApp(){
             if(scale){
                 setScale(scale.doubleValue);
             }
-        });
+        }];
     });
 }
 
