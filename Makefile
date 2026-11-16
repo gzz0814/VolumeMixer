@@ -57,7 +57,10 @@ VolumeMixerLauncher_FILES = launcher/main.m
 VolumeMixerLauncher_CFLAGS = -fobjc-arc
 VolumeMixerLauncher_FRAMEWORKS = UIKit Foundation
 VolumeMixerLauncher_INSTALL_PATH = /Applications
-VolumeMixerLauncher_INFOPLIST = launcher/Info.plist
+# Theos has no $(TARGET)_INFOPLIST variable: an application's Info.plist must be
+# supplied as a bundle resource, and Theos relocates it into the .app root. This
+# is what registers the "volumemixer://" scheme with LaunchServices.
+VolumeMixerLauncher_RESOURCE_FILES = launcher/Info.plist
 
 export ADDITIONAL_CFLAGS += -Wno-error -Wno-error=unused-variable -Wno-error=unused-function -Wno-error=unused-value -Wno-error=unused-but-set-variable -include Prefix.pch
 
