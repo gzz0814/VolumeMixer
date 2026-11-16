@@ -7,41 +7,29 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install toolchain dependencies
+      - name: Install Theos (recursive, with Xcode toolchain/SDK)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential clang lld llvm binutils \
-            git git-lfs curl wget perl python3 zip unzip fakeroot \
-            xz-utils liblzma-dev libxml2-dev libz-dev libssl-dev gnupg
-
-      - name: Install Theos (clone, non-interactive)
-        run: |
-          git clone --depth=1 https://github.com/theos/theos.git "${RUNNER_TEMP}/theos"
-          git -C "${RUNNER_TEMP}/theos" lfs install
-          git -C "${RUNNER_TEMP}/theos" submodule update --init --recursive
-          git -C "${RUNNER_TEMP}/theos" lfs pull
+          git clone --recursive https://github.com/theos/theos.git "${RUNNER_TEMP}/theos"
+          export THEOS="${RUNNER_TEMP}/theos"
+          "${THEOS}/bin/post-update" || true
           echo "THEOS=${RUNNER_TEMP}/theos" >> "$GITHUB_ENV"
           echo "${RUNNER_TEMP}/theos/bin" >> "$GITHUB_PATH"
 
-      - name: Install iOS SDK
+      - name: Show toolchain info
         run: |
-          mkdir -p "${THEOS}/sdks"
-          curl -fL -o /tmp/sdk.tar.xz \
-            https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz
-          tar -xf /tmp/sdk.tar.xz -C "${THEOS}/sdks"
-          ls "${THEOS}/sdks"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+          ls "${THEOS}/bin"
 
       - name: Build package
         run: |
-          chmod +x "${THEOS}/bin/"* 2>/dev/null || true
           make clean
-          make package FINAL=1 _THEOS_PLATFORM_DPKG_DEB=dpkg-deb
+          make package FINAL=1
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
