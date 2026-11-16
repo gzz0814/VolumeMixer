@@ -9,6 +9,12 @@ export TARGET = iphone:clang:latest:7.0
 	endif
 endif
 
+# Build as a rootless package so the tweak/prefs/CC install under the jailbreak
+# root prefix (/var/jb) and get picked up by rootless / roothide (RootHide)
+# injectors and PreferenceLoader. A rootful (/Library) build is invisible to
+# these jailbreaks, which is why the tweak never loaded on roothide.
+THEOS_PACKAGE_SCHEME = rootless
+
 INSTALL_TARGET_PROCESSES = SpringBoard
 
 TWEAK_NAME = VolumeMixer

@@ -94,12 +94,14 @@ static BOOL VMHandleVolumeMixerURL(NSURL *url){
 - (void)increaseVolume{
     %orig;
     if(byVolumeButton){
+        showHUDWindowSB();
         [hudWindow showWindow];
     }
 }
 - (void)decreaseVolume{
     %orig;
     if(byVolumeButton){
+        showHUDWindowSB();
         [hudWindow showWindow];
     }
 }
@@ -119,5 +121,14 @@ static BOOL VMHandleVolumeMixerURL(NSURL *url){
     int token;
     notify_register_dispatch("com.brend0n.volumemixer/loadPref", &token, dispatch_get_main_queue(), ^(int token) {
         loadPref();
+    });
+
+    // The Control Center toggle lives in the ControlCenter process and cannot
+    // reach VMHUDWindow here; it posts this notification instead, and SpringBoard
+    // performs the actual show/hide.
+    int toggleToken;
+    notify_register_dispatch("com.brend0n.volumemixer/toggle", &toggleToken, dispatch_get_main_queue(), ^(int t) {
+        showHUDWindowSB();
+        [hudWindow changeVisibility];
     });
 }
