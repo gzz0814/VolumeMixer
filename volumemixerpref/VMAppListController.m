@@ -20,6 +20,13 @@
 - (NSURL *)bundleURL;
 @end
 
+// PSListController builds each row's cell through this method, but the
+// Preferences header shipped with Theos omits the declaration, so add it here
+// to let the override below call [super tableView:cellForRowAtIndexPath:specifier:].
+@interface PSListController (VMAppIcons)
+- (id)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath specifier:(PSSpecifier *)specifier;
+@end
+
 @implementation VMAppListController {
     NSMutableArray *_selected;   // array of selected bundle identifiers
     NSArray *_apps;              // filtered + sorted LSApplicationProxy objects
