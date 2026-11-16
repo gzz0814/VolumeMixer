@@ -75,6 +75,11 @@ static void VMPostSchemeNotify(NSURL *url){
 // ever reach SpringBoard, so we intercept UIApplication's openURL: entry points
 // in every process the tweak loads and turn volumemixer:// into a Darwin notify
 // that SpringBoard listens for.
+@interface LSApplicationWorkspace : NSObject
+- (BOOL)canOpenURL:(NSURL *)url;
+- (BOOL)openURL:(NSURL *)url;
+- (BOOL)openURL:(NSURL *)url options:(NSDictionary *)options withCompletionCallback:(void(^)(NSInteger, id, NSError *))callback;
+@end
 %group url
 %hook UIApplication
 - (BOOL)openURL:(NSURL *)url{
@@ -108,6 +113,29 @@ static void VMPostSchemeNotify(NSURL *url){
     %orig;
 }
 %end //UIApplication
+%hook LSApplicationWorkspace
+- (BOOL)canOpenURL:(NSURL *)url{
+    if([url.scheme isEqualToString:@"volumemixer"]){
+        return YES;
+    }
+    return %orig;
+}
+- (BOOL)openURL:(NSURL *)url{
+    if([url.scheme isEqualToString:@"volumemixer"]){
+        VMPostSchemeNotify(url);
+        return YES;
+    }
+    return %orig;
+}
+- (BOOL)openURL:(NSURL *)url options:(NSDictionary *)options withCompletionCallback:(void(^)(NSInteger, id, NSError *))callback{
+    if([url.scheme isEqualToString:@"volumemixer"]){
+        VMPostSchemeNotify(url);
+        if(callback) callback(0, nil, nil);
+        return YES;
+    }
+    return %orig;
+}
+%end //LSApplicationWorkspace
 %end //url
 
 %group SB

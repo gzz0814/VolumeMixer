@@ -20,7 +20,6 @@ INSTALL_TARGET_PROCESSES = SpringBoard
 TWEAK_NAME = VolumeMixer
 
 VolumeMixer_FILES = Tweak.xm VMHookInfo.mm VMHookAudioUnit.mm 
-VolumeMixer_FILES += MRYIPC/MRYIPCCenter.m MRYIPC/mrybootstrap.m
 VolumeMixer_CFLAGS = -fobjc-arc
 VolumeMixer_LIBRARIES += substrate
 VolumeMixer_LOGOSFLAGS += -c generator=MobileSubstrate
@@ -34,7 +33,7 @@ endif
 
 BUNDLE_NAME = volumemixer CCVolumeMixer
 
-volumemixer_FILES = volumemixerpref/VMPrefRootListController.m volumemixerpref/BDInfoListController.m volumemixerpref/VMLicenseViewController.m volumemixerpref/VMAuthorListController.m
+volumemixer_FILES = volumemixerpref/VMPrefRootListController.m volumemixerpref/BDInfoListController.m volumemixerpref/VMLicenseViewController.m volumemixerpref/VMAuthorListController.m volumemixerpref/VMAppListController.m
 volumemixer_INSTALL_PATH = /Library/PreferenceBundles
 volumemixer_FRAMEWORKS = UIKit
 # Preferences is a private framework whose stub is not in the iOS SDK; the

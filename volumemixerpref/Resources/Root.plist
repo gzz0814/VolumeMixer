@@ -20,24 +20,9 @@
 			<key>label</key>
 			<string>CHOOSE_ENABLED_APP</string>
 			<key>detail</key>
-			<string>ATLApplicationListMultiSelectionController</string>
+			<string>VMAppListController</string>
 			<key>key</key>
 			<string>com.brend0n.volumemixer_apps</string>
-			<key>sections</key>
-			<array>
-				<dict>
-					<key>sectionType</key>
-					<string>Visible</string>
-				</dict>
-			</array>
-			<key>showIdentifiersAsSubtitle</key>
-			<true/>
-			<key>defaultApplicationSwitchValue</key>
-			<false/>
-			<key>useSearchBar</key>
-			<true/>
-			<key>includeIdentifiersInSearch</key>
-			<true/>
 			<key>PostNotification</key>
 			<string>com.brend0n.volumemixer/loadPref</string>
 		</dict>
@@ -205,24 +190,9 @@
 			<key>label</key>
 			<string>CHOOSE_AUDIO_MIX_MUSIC_APP</string>
 			<key>detail</key>
-			<string>ATLApplicationListMultiSelectionController</string>
+			<string>VMAppListController</string>
 			<key>key</key>
 			<string>com.brend0n.volumemixer_audiomixApps</string>
-			<key>sections</key>
-			<array>
-				<dict>
-					<key>sectionType</key>
-					<string>Visible</string>
-				</dict>
-			</array>
-			<key>showIdentifiersAsSubtitle</key>
-			<true/>
-			<key>defaultApplicationSwitchValue</key>
-			<false/>
-			<key>useSearchBar</key>
-			<true/>
-			<key>includeIdentifiersInSearch</key>
-			<true/>
 			<key>PostNotification</key>
 			<string>com.brend0n.volumemixer/loadPref</string>
 		</dict>

@@ -1,7 +1,7 @@
 Package: com.brend0n.volumemixer
 Name: VolumeMixer
-Depends: mobilesubstrate, preferenceloader, com.opa334.altlist
-Version: 0.0.8
+Depends: mobilesubstrate, preferenceloader
+Version: 0.0.9
 Architecture: iphoneos-arm64
 Description: Volume control for individual app. Adds a Shortcuts-friendly URL scheme and normalizes app icon sizing in the mixer panel.
 Maintainer: Brend0n <brendonjkding@126.com>
