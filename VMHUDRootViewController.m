@@ -7,6 +7,7 @@
 #import "_UIBackdropView.h"
 #import <objc/runtime.h>
 #import <notify.h>
+#import <Foundation/NSDistributedNotificationCenter.h>
 #import <UIKit/UIImage+Private.h>
 #import <sys/types.h>
 #import <signal.h>

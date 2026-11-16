@@ -9,6 +9,9 @@
 #import <unordered_map>
 #import <AudioToolbox/AudioToolbox.h>
 #import <AVFoundation/AVFoundation.h>
+// The UIKit module does not re-export this class when built with modules, so
+// import its Foundation header explicitly (used for cross-process IPC).
+#import <Foundation/NSDistributedNotificationCenter.h>
 
 extern "C" kern_return_t mach_vm_protect(vm_map_t, mach_vm_address_t, mach_vm_size_t, boolean_t, vm_prot_t);
 
@@ -417,14 +420,14 @@ static void registerApp(){
         // NSUserDefaults domain (cfprefsd caches it per-process, so a live
         // SpringBoard never sees a live app's write) or MRYIPC's mach bootstrap
         // (which throws on iOS 15/16).
-        void (^__block publish)(void) = ^{
+        void (^publish)(void) = [^{
             NSDictionary *info = @{ @"bundleID": bundleID,
                                     @"pid": @(NSProcessInfo.processInfo.processIdentifier) };
             [dnc postNotificationName:@"com.brend0n.volumemixer/register"
                                object:nil
                              userInfo:info
                    deliverImmediately:YES];
-        };
+        } copy];
         publish();
 
         // SpringBoard broadcasts this when it (re)builds the panel so apps that
