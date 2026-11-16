@@ -35,6 +35,18 @@ jobs:
 
       - name: Build package
         run: |
+          # Auto-increment the package version on every build. The first three
+          # dotted components come from control; the fourth is GITHUB_RUN_NUMBER,
+          # which only ever increases, so each .deb has a strictly greater version
+          # than the previous build and package managers can never keep or roll
+          # back to a stale build.
+          BASE="$(awk -F': ' '/^Version:/{print $2}' control)"
+          BASE_MAIN="$(echo "$BASE" | cut -d. -f1-3)"
+          NEW_VERSION="${BASE_MAIN}.${GITHUB_RUN_NUMBER}"
+          sed -i.bak "s/^Version:.*/Version: ${NEW_VERSION}/" control
+          rm -f control.bak
+          echo "PKG_VERSION=${NEW_VERSION}" >> "$GITHUB_ENV"
+          echo "Version: ${BASE} -> ${NEW_VERSION}"
           make clean
           make package FINAL=1
 
@@ -51,16 +63,17 @@ jobs:
         run: |
           SHA="$(git rev-parse HEAD)"
           SHORT="${SHA:0:7}"
+          NOTES="Automated build v${PKG_VERSION} from commit $SHORT."
           # Rolling prerelease that always points at the newest successful build.
           if ! gh release view latest-build >/dev/null 2>&1; then
             gh release create latest-build \
               --target "$SHA" \
-              --title "VolumeMixer latest build" \
+              --title "VolumeMixer latest build (v${PKG_VERSION})" \
               --prerelease \
-              --notes "Automated build from commit $SHORT."
+              --notes "$NOTES"
           else
             gh release edit latest-build --target "$SHA" \
-              --title "VolumeMixer latest build" \
-              --notes "Automated build from commit $SHORT."
+              --title "VolumeMixer latest build (v${PKG_VERSION})" \
+              --notes "$NOTES"
           fi
           gh release upload latest-build packages/*.deb --clobber

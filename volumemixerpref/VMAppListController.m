@@ -1,4 +1,5 @@
 #import "VMAppListController.h"
+#import <Preferences/PSSpecifier.h>
 #import <objc/runtime.h>
 #import <notify.h>
 
@@ -67,7 +68,6 @@
     self.title = VMNSLocalizedString(@"CHOOSE_ENABLED_APP");
 
     [super viewDidLoad];
-    [self reloadData];
 }
 
 - (NSArray *)specifiers {
