@@ -26,6 +26,14 @@ jobs:
           echo "THEOS=${RUNNER_TEMP}/theos" >> "$GITHUB_ENV"
           echo "${RUNNER_TEMP}/theos/bin" >> "$GITHUB_PATH"
 
+      - name: Install iOS SDK
+        run: |
+          mkdir -p "${THEOS}/sdks"
+          curl -fL -o /tmp/sdk.tar.xz \
+            https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz
+          tar -xf /tmp/sdk.tar.xz -C "${THEOS}/sdks"
+          ls "${THEOS}/sdks"
+
       - name: Build package
         run: |
           chmod +x "${THEOS}/bin/"* 2>/dev/null || true
