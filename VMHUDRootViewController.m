@@ -244,19 +244,24 @@
 }
 
 - (void)initServer {
-    // Apps announce themselves through a Darwin notification (see Tweak.xm).
-    // SpringBoard reads the shared registry and builds the panel; no mach
-    // bootstrap / MRYIPC involved.
-    notify_register_dispatch(kVMAppsChangedNotify, &_appsNotifyToken, dispatch_get_main_queue(), ^(int t){
-        [self reloadRegisteredApps];
-    });
+    // Apps announce themselves with a distributed notification (see Tweak.xm).
+    // Distributed notifications carry the bundleID/pid payload and reach a live
+    // SpringBoard reliably, unlike a shared NSUserDefaults domain.
+    __weak typeof(self) weakSelf = self;
+    [[NSDistributedNotificationCenter defaultCenter] addObserverForName:@"com.brend0n.volumemixer/register"
+                                                                 object:nil
+                                                                queue:NSOperationQueue.mainQueue
+                                                           usingBlock:^(NSNotification *note){
+        [weakSelf addAppIfMissing:note.userInfo[@"bundleID"] pid:note.userInfo[@"pid"]];
+    }];
 }
 - (void)reloadRegisteredApps {
-    [g_defaults synchronize];
-    NSDictionary *apps = [g_defaults dictionaryForKey:kPrefRunningAppsKey] ?: @{};
-    for(NSString *bundleID in apps){
-        [self addAppIfMissing:bundleID pid:apps[bundleID]];
-    }
+    // Ask every running enabled app to re-announce itself; they respond through
+    // the "register" notification handled in initServer.
+    [[NSDistributedNotificationCenter defaultCenter] postNotificationName:@"com.brend0n.volumemixer/queryRunning"
+                                                                   object:nil
+                                                                 userInfo:nil
+                                                       deliverImmediately:YES];
     [self reloadRunningApp];
 }
 - (void)addAppIfMissing:(NSString *)bundleID pid:(NSNumber *)pid {
@@ -272,13 +277,14 @@
     VMHUDView *hudView = [[VMHUDView alloc] initWithFrame:CGRectMake(0, 0, kHudWidth, kHudHeight)];
     hudView.bundleID = bundleID;
     hudView.valueDidChange = ^(CGFloat curScale){
-        // Persist the scale to the shared suite, then wake just this app.
+        // Persist for the app's next launch, then push the live change to it.
         NSMutableDictionary *scales = [[g_defaults dictionaryForKey:kPrefScalesKey] mutableCopy] ?: [NSMutableDictionary new];
         scales[bundleID] = @(curScale);
         [g_defaults setObject:scales forKey:kPrefScalesKey];
-        [g_defaults synchronize];
-        NSString *volName = [NSString stringWithFormat:@"com.brend0n.volumemixer/volume/%@", bundleID];
-        notify_post(volName.UTF8String);
+        [[NSDistributedNotificationCenter defaultCenter] postNotificationName:@"com.brend0n.volumemixer/setVolume"
+                                                                       object:nil
+                                                                     userInfo:@{@"bundleID": bundleID, @"scale": @(curScale)}
+                                                           deliverImmediately:YES];
     };
     [hudView initScale];
     [_hudViews addObject:hudView];

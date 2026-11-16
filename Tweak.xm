@@ -410,26 +410,43 @@ static void registerApp(){
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         NSString *bundleID = NSBundle.mainBundle.bundleIdentifier;
-        int pid = NSProcessInfo.processInfo.processIdentifier;
+        NSDistributedNotificationCenter *dnc = NSDistributedNotificationCenter.defaultCenter;
 
-        // Publish this app to SpringBoard through the shared preferences suite
-        // plus a Darwin notification. This replaces MRYIPC's mach-bootstrap
-        // transport, which throws an uncaught exception (crashing every enabled
-        // app) once iOS 15/16 sandboxing blocks the mach-lookup helper trick.
-        NSMutableDictionary *apps = [[g_defaults dictionaryForKey:kPrefRunningAppsKey] mutableCopy] ?: [NSMutableDictionary new];
-        apps[bundleID] = @(pid);
-        [g_defaults setObject:apps forKey:kPrefRunningAppsKey];
-        [g_defaults synchronize];
-        notify_post(kVMAppsChangedNotify);
+        // Announce this running app to SpringBoard. Distributed notifications
+        // carry a payload and cross the sandbox reliably, unlike a shared
+        // NSUserDefaults domain (cfprefsd caches it per-process, so a live
+        // SpringBoard never sees a live app's write) or MRYIPC's mach bootstrap
+        // (which throws on iOS 15/16).
+        void (^__block publish)(void) = ^{
+            NSDictionary *info = @{ @"bundleID": bundleID,
+                                    @"pid": @(NSProcessInfo.processInfo.processIdentifier) };
+            [dnc postNotificationName:@"com.brend0n.volumemixer/register"
+                               object:nil
+                             userInfo:info
+                   deliverImmediately:YES];
+        };
+        publish();
 
-        // Listen for volume changes addressed specifically to this app.
-        NSString *volName = [NSString stringWithFormat:@"com.brend0n.volumemixer/volume/%@", bundleID];
-        int token;
-        notify_register_dispatch(volName.UTF8String, &token, dispatch_get_main_queue(), ^(int t){
-            [g_defaults synchronize];
-            NSNumber *scaleNumber = [g_defaults dictionaryForKey:kPrefScalesKey][bundleID];
-            if(scaleNumber){
-                setScale([scaleNumber doubleValue]);
+        // SpringBoard broadcasts this when it (re)builds the panel so apps that
+        // were already running re-announce themselves.
+        [dnc addObserverForName:@"com.brend0n.volumemixer/queryRunning"
+                         object:nil
+                        queue:NSOperationQueue.mainQueue
+                   usingBlock:^(__unused NSNotification *note){
+            publish();
+        }];
+
+        // Per-app volume changes addressed to this bundle.
+        [dnc addObserverForName:@"com.brend0n.volumemixer/setVolume"
+                         object:nil
+                        queue:NSOperationQueue.mainQueue
+                   usingBlock:^(NSNotification *note){
+            if(![note.userInfo[@"bundleID"] isEqualToString:bundleID]){
+                return;
+            }
+            NSNumber *scale = note.userInfo[@"scale"];
+            if(scale){
+                setScale(scale.doubleValue);
             }
         });
     });

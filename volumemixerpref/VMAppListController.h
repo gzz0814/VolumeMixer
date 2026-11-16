@@ -8,5 +8,5 @@
 // prefs bundle and enumerates apps directly through LSApplicationWorkspace, so
 // it always works. It writes the same array-of-bundle-IDs value that the tweak
 // reads from kPrefAppsKey.
-@interface VMAppListController : PSListController
+@interface VMAppListController : PSListController <UISearchResultsUpdating>
 @end

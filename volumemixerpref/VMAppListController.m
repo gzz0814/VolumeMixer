@@ -9,11 +9,20 @@
 - (NSArray *)allApplications;
 @end
 
+@interface LSApplicationProxy : NSObject
+- (NSString *)bundleIdentifier;
+- (NSString *)localizedName;
+- (NSUInteger)applicationType;
+- (BOOL)isDockable;
+- (BOOL)hidden;
+@end
+
 @implementation VMAppListController {
     NSMutableArray *_selected;   // array of selected bundle identifiers
     NSArray *_apps;              // filtered + sorted LSApplicationProxy objects
     NSUserDefaults *_defaults;
     NSString *_targetKey;        // defaults key this picker writes (from the parent cell)
+    NSString *_searchText;       // current search filter (nil == show all)
 }
 
 - (void)viewDidLoad {
@@ -37,18 +46,25 @@
     id workspace = LSClass ? [LSClass defaultWorkspace] : nil;
     NSArray *all = workspace ? [workspace allApplications] : nil;
 
+    // Keep only real, home-screen apps. This drops the hundreds of system UI
+    // agents (AAUIViewService, AirDropUI, Bark, CarPlaySplashScreen, ...) that
+    // would otherwise bury the apps the user actually wants.
     NSMutableArray *list = [NSMutableArray new];
-    for(id proxy in all){
+    for(LSApplicationProxy *proxy in all){
         NSString *bundleID = nil;
         NSString *name = nil;
         @try {
-            bundleID = [proxy valueForKey:@"bundleIdentifier"];
-            name = [proxy valueForKey:@"localizedName"];
-            NSNumber *type = [proxy valueForKey:@"applicationType"];
-            // 0 == LSApplicationProxyTypeApplicationUser: only show normal user apps.
-            if(type && type.integerValue != 0){
+            if([proxy respondsToSelector:@selector(applicationType)] && [proxy applicationType] != 0){
+                continue; // 0 == LSApplicationProxyTypeApplicationUser
+            }
+            if([proxy respondsToSelector:@selector(isDockable)] && ![proxy isDockable]){
                 continue;
             }
+            if([proxy respondsToSelector:@selector(hidden)] && [proxy hidden]){
+                continue;
+            }
+            bundleID = [proxy bundleIdentifier];
+            name = [proxy respondsToSelector:@selector(localizedName)] ? [proxy localizedName] : nil;
         } @catch (__unused NSException *e) {
             continue;
         }
@@ -58,25 +74,57 @@
         [list addObject:proxy];
     }
 
-    [list sortUsingComparator:^NSComparisonResult(id a, id b){
-        NSString *na = [a valueForKey:@"localizedName"] ?: @"";
-        NSString *nb = [b valueForKey:@"localizedName"] ?: @"";
-        return [na compare:nb options:NSCaseInsensitiveSearch];
+    [list sortUsingComparator:^NSComparisonResult(LSApplicationProxy *a, LSApplicationProxy *b){
+        return [[a localizedName] compare:[b localizedName] options:NSCaseInsensitiveSearch];
     }];
     _apps = list;
 
     self.title = VMNSLocalizedString(@"CHOOSE_ENABLED_APP");
 
     [super viewDidLoad];
+
+    [self vm_setupSearchBar];
+}
+
+- (void)vm_setupSearchBar {
+    if(!objc_getClass("UISearchController")){
+        return;
+    }
+    UISearchController *searchController = [[UISearchController alloc] initWithSearchResultsController:nil];
+    searchController.searchResultsUpdater = self;
+    searchController.dimsBackgroundDuringPresentation = NO;
+    searchController.hidesSearchBarWhenScrolling = NO;
+    self.navigationItem.searchController = searchController;
+    self.definesPresentationContext = YES;
+}
+
+- (void)updateSearchResultsForSearchController:(UISearchController *)searchController {
+    NSString *text = searchController.searchBar.text;
+    _searchText = [text length] ? text : nil;
+    _specifiers = nil;
+    [self reloadSpecifiers];
+}
+
+- (BOOL)matches:(LSApplicationProxy *)proxy {
+    if(!_searchText){
+        return YES;
+    }
+    NSString *name = [proxy localizedName] ?: @"";
+    NSString *bundleID = [proxy bundleIdentifier] ?: @"";
+    return [name rangeOfString:_searchText options:NSCaseInsensitiveSearch].location != NSNotFound
+        || [bundleID rangeOfString:_searchText options:NSCaseInsensitiveSearch].location != NSNotFound;
 }
 
 - (NSArray *)specifiers {
     if(!_specifiers){
         NSMutableArray *specs = [NSMutableArray new];
 
-        for(id proxy in _apps){
-            NSString *bundleID = [proxy valueForKey:@"bundleIdentifier"];
-            NSString *name = [proxy valueForKey:@"localizedName"];
+        for(LSApplicationProxy *proxy in _apps){
+            if(![self matches:proxy]){
+                continue;
+            }
+            NSString *bundleID = [proxy bundleIdentifier];
+            NSString *name = [proxy localizedName];
 
             PSSpecifier *spec = [PSSpecifier preferenceSpecifierNamed:name
                                                                target:self
