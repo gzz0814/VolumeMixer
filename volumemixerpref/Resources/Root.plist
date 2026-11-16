@@ -26,7 +26,7 @@
 			<key>PostNotification</key>
 			<string>com.brend0n.volumemixer/loadPref</string>
 		</dict>
-        <dict>
+		<dict>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
@@ -92,20 +92,6 @@
 		    <true/>
 		    <key>label</key>
 		    <string>CONTROLCENTER</string>
-		</dict>
-        <dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>label</key>
-			<string>BY_ACTIVATOR</string>
-			<key>isController</key>
-			<true/>
-			<key>bundle</key>
-			<string>LibActivator</string>
-			<key>activatorListener</key>
-			<string>com.brend0n.volumemixer</string>
-			<key>id</key>
-			<string>BY_ACTIVATOR</string>
 		</dict>
 
 		<dict>
@@ -312,43 +298,6 @@
 			<string>NumberPad</string>
 			<key>PostNotification</key>
 			<string>com.brend0n.volumemixer/loadPref</string>
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>ACTIVATOR_LISTENERS</string>
-			<key>footerText</key>
-			<string>ACTIVATOR_LISTENERS_FOOTER_TEXT</string>
-		</dict>
-        <dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>label</key>
-			<string>ACTIVATOR_VOLUME_UP</string>
-			<key>isController</key>
-			<true/>
-			<key>bundle</key>
-			<string>LibActivator</string>
-			<key>activatorListener</key>
-			<string>com.brend0n.volumemixer.volumeup</string>
-			<key>id</key>
-			<string>ACTIVATOR_VOLUME_UP</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>label</key>
-			<string>ACTIVATOR_VOLUME_DOWN</string>
-			<key>isController</key>
-			<true/>
-			<key>bundle</key>
-			<string>LibActivator</string>
-			<key>activatorListener</key>
-			<string>com.brend0n.volumemixer.volumedown</string>
-			<key>id</key>
-			<string>ACTIVATOR_VOLUME_DOWN</string>
 		</dict>
 
         <dict>
