@@ -2,6 +2,9 @@
 #import <Preferences/PSSpecifier.h>
 #import <objc/runtime.h>
 #import <notify.h>
+// Provides -[UIImage _applicationIconImageForBundleIdentifier:format:scale:],
+// the same icon source the mixer panel uses, so the picker can show app icons.
+#import <UIKit/UIImage+Private.h>
 
 // Minimal declarations for the private LaunchServices classes we enumerate.
 @interface LSApplicationWorkspace : NSObject
@@ -193,6 +196,20 @@
     [_defaults setObject:_selected forKey:_targetKey];
     [_defaults synchronize];
     notify_post("com.brend0n.volumemixer/loadPref");
+}
+
+// Feature #1: show each app's icon next to its name. PSListController builds a
+// PSSwitchCell per specifier; we let it create the cell and then drop the icon
+// into the cell's imageView, keyed off the bundleID stored on the specifier.
+- (id)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath specifier:(PSSpecifier *)specifier {
+    id cell = [super tableView:tableView cellForRowAtIndexPath:indexPath specifier:specifier];
+    NSString *bundleID = [specifier propertyForKey:@"bundleID"];
+    if([bundleID length] && [cell isKindOfClass:[UITableViewCell class]]){
+        UIImage *icon = [UIImage _applicationIconImageForBundleIdentifier:bundleID format:0 scale:[UIScreen mainScreen].scale];
+        ((UITableViewCell *)cell).imageView.image = icon;
+        ((UITableViewCell *)cell).imageView.highlightedImage = nil;
+    }
+    return cell;
 }
 
 @end

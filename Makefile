@@ -50,24 +50,11 @@ CCVolumeMixer_LDFLAGS = -undefined dynamic_lookup
 CCVolumeMixer_INSTALL_PATH = /Library/ControlCenter/Bundles/
 CCVolumeMixer_RESOURCE_DIRS = ccvolumemixer/Resources
 
-# Companion LSUIElement app that owns the "volumemixer://" URL scheme so the
-# Shortcuts "Open URL" action can resolve it (see launcher/main.m).
-APPLICATION_NAME = VolumeMixerLauncher
-VolumeMixerLauncher_FILES = launcher/main.m
-VolumeMixerLauncher_CFLAGS = -fobjc-arc
-VolumeMixerLauncher_FRAMEWORKS = UIKit Foundation
-VolumeMixerLauncher_INSTALL_PATH = /Applications
-# Theos has no $(TARGET)_INFOPLIST variable: an application's Info.plist must be
-# supplied as a bundle resource, and Theos relocates it into the .app root. This
-# is what registers the "volumemixer://" scheme with LaunchServices.
-VolumeMixerLauncher_RESOURCE_FILES = launcher/Info.plist
-
 export ADDITIONAL_CFLAGS += -Wno-error -Wno-error=unused-variable -Wno-error=unused-function -Wno-error=unused-value -Wno-error=unused-but-set-variable -include Prefix.pch
 
 include $(THEOS)/makefiles/common.mk
 include $(THEOS_MAKE_PATH)/tweak.mk
 include $(THEOS_MAKE_PATH)/bundle.mk
-include $(THEOS_MAKE_PATH)/application.mk
 
 internal-stage::
 	$(ECHO_NOTHING)mkdir -p $(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences$(ECHO_END)
