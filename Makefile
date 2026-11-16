@@ -18,7 +18,6 @@ VolumeMixer_FILES = \
 
 VolumeMixer_CFLAGS = -fobjc-arc -Wno-deprecated-declarations
 VolumeMixer_FRAMEWORKS = UIKit Foundation CoreGraphics QuartzCore AVFoundation AudioToolbox
-VolumeMixer_PRIVATE_FRAMEWORKS = BackBoardServices
 VolumeMixer_LIBRARIES = substrate
 VolumeMixer_EXTRA_LDFLAGS = -undefined dynamic_lookup
 
