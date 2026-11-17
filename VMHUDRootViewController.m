@@ -35,6 +35,7 @@
     NSMutableArray<NSString *> *_bundleIDs;
     NSMutableArray<NSNumber *> *_pids;
     NSMutableArray<NSNumber *> *_runningAppIndexes;
+    BOOL _refreshScheduled;
 }
 - (instancetype)init {
     self = [super init];
@@ -120,29 +121,69 @@
     [_pids removeObjectAtIndex:i];
 }
 - (void)reloadRunningApp {
+    // Re-read the setting in case it changed since the panel was built, so the
+    // "only show running apps" toggle is honored on every open.
+    _isHideInactiveApps = [g_defaults objectForKey:kPrefIsHideInactiveAppsKey] ? [g_defaults boolForKey:kPrefIsHideInactiveAppsKey] : NO;
+
     void (^blockForMain)(void) = ^{
-        for(int i = [_bundleIDs count] - 1; i + 1; i--) {
-            int pid = [_pids[i] intValue];
-            int error = kill(pid, 0);
-            if(error) [self removeDataAtIndex:i];
+        for(int i = (int)[_bundleIDs count] - 1; i >= 0; i--) {
+            if(kill([_pids[i] intValue], 0) != 0) [self removeDataAtIndex:i];
         }
-        if(_isHideInactiveApps) {
-            NSMutableArray *runningAppIndexes = [NSMutableArray new];
-            int i = 0;
-            for(NSNumber *pid in _pids) {
-                if([[[[objc_getClass("FBProcessManager") sharedInstance] processForPID:[pid intValue]] state] taskState] == 2) {
-                    [runningAppIndexes addObject:@(i)];
-                }
-                i++;
-            }
-            _runningAppIndexes = runningAppIndexes;
-        }
+        [self recomputeRunningAppIndexes];
         [_collectionView reloadData];
     };
     if(NSThread.isMainThread) blockForMain();
-    else {
-        dispatch_async(dispatch_get_main_queue(), blockForMain);
+    else dispatch_async(dispatch_get_main_queue(), blockForMain);
+
+    // Apps answer the queryRunning broadcast asynchronously; refresh again a
+    // moment later so late re-announcements still make it into this panel.
+    [self schedulePanelRefresh];
+}
+
+// Build _runningAppIndexes (positions in _pids/_bundleIDs/_hudViews that count
+// as "running") whenever the setting is enabled.
+- (void)recomputeRunningAppIndexes {
+    if(!_isHideInactiveApps) return;
+
+    NSMutableArray *runningAppIndexes = [NSMutableArray new];
+    BOOL canQuery = (objc_getClass("FBProcessManager") != nil);
+    int i = 0;
+    for(NSNumber *pid in _pids) {
+        BOOL running = NO;
+        if(canQuery) {
+            @try {
+                running = [[[[objc_getClass("FBProcessManager") sharedInstance] processForPID:pid.intValue] state] taskState] == 2;
+            } @catch (__unused NSException *e) {
+                running = NO;
+            }
+        }
+        else {
+            // Process state is unreadable on this device: treat every live pid as
+            // running so the panel isn't left empty when the setting is on.
+            running = (kill(pid.intValue, 0) == 0);
+        }
+        if(running) [runningAppIndexes addObject:@(i)];
+        i++;
     }
+    _runningAppIndexes = runningAppIndexes;
+}
+
+// Coalesce the many async register replies into a single UI refresh shortly
+// after they start arriving.
+- (void)schedulePanelRefresh {
+    if(_refreshScheduled) return;
+    _refreshScheduled = YES;
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if(!strongSelf) return;
+        strongSelf->_refreshScheduled = NO;
+        for(int i = (int)[strongSelf->_bundleIDs count] - 1; i >= 0; i--) {
+            if(kill([strongSelf->_pids[i] intValue], 0) != 0) [strongSelf removeDataAtIndex:i];
+        }
+        [strongSelf recomputeRunningAppIndexes];
+        [strongSelf->_collectionView reloadData];
+    });
 }
 
 - (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section {
@@ -289,6 +330,10 @@
     };
     [hudView initScale];
     [_hudViews addObject:hudView];
+
+    // This app just (re)announced itself; fold it into the visible panel on the
+    // next coalesced refresh instead of waiting for the next open.
+    [self schedulePanelRefresh];
 }
 - (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator {
     [super viewWillTransitionToSize:size withTransitionCoordinator:coordinator];

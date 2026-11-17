@@ -61,7 +61,10 @@ static VMHUDWindow *sharedWindow;
 }
 - (void)showWindow {
     if(!_showsOnLockScreen && [[objc_getClass("SBLockScreenManager") sharedInstance] isUILocked]) return;
-    [self.rootViewController performSelector:@selector(reloadRunningApp)];
+    // Broadcast a query so every already-running enabled app re-announces
+    // itself, then rebuild the panel (async replies are caught by the follow-up
+    // refresh scheduled inside reloadRegisteredApps/reloadRunningApp).
+    [self.rootViewController performSelector:NSSelectorFromString(@"reloadRegisteredApps")];
     [UIView animateWithDuration:0.5
                           delay:0
                         options:UIViewAnimationOptionAllowUserInteraction
