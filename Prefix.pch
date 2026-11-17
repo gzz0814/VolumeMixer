@@ -37,9 +37,6 @@
 #define NSLog(FORMAT, ...)
 #endif
 
-#define MRYIPCCenter VM_MRYIPCCenter
-#define _MRYIPCMethod VM__MRYIPCMethod
-
 #import <UIKit/UIKit.h>
 
 #endif //__OBJC__
